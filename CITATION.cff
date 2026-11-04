@@ -1,0 +1,20 @@
+cff-version: 1.2.0
+message: "Please cite dérive if you use it."
+type: software
+title: "dérive: a recommender for rare concepts"
+abstract: >-
+  A recommender over concept embeddings that suggests rare concepts close to or far from
+  your taste, learned by Rocchio relevance feedback.
+authors:
+  - family-names: Cortal
+    given-names: Gustave
+repository-code: "https://github.com/gustavecortal/derive"
+url: "https://gustavecortal.com/concept-space/"
+license: MIT
+date-released: "2026-11-04"
+keywords:
+  - recommender system
+  - Rocchio relevance feedback
+  - text embeddings
+  - Qwen3-Embedding
+  - serendipity

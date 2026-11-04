@@ -1,0 +1,6 @@
+The concepts in concepts.json (terms, descriptions, fields and synonym groups) are licensed under
+the Creative Commons Attribution-ShareAlike 4.0 International licence (CC BY-SA 4.0):
+https://creativecommons.org/licenses/by-sa/4.0/
+
+Many descriptions are adapted from Wikipedia articles, which are available under the same licence.
+vectors.bin is derived from concepts.json and shares its licence.
