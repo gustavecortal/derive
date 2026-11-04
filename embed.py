@@ -1,6 +1,6 @@
 # /// script
 # requires-python = ">=3.10"
-# dependencies = ["numpy", "sentence-transformers>=6.2", "torch>=2.8"]
+# dependencies = ["numpy", "sentence-transformers==6.2.0", "transformers==5.22.1", "torch>=2.8"]
 # ///
 """Embed dérive's concepts with Qwen3-Embedding-4B and write the vectors the recommender reads.
 

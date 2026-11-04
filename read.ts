@@ -4,9 +4,11 @@
  *   node read.ts                 pick options by number, s to save, d to dislike, q to quit
  *   node read.ts 1 3 s 2 d 1     the same moves, scripted
  *   node read.ts --seed 7 ...    seed the draw of the Far option, for repeatable sessions
+ *   node read.ts --data mine     read mine/concepts.json and mine/vectors.bin instead of data/
  */
 
 import { createInterface } from 'node:readline';
+import { pathToFileURL } from 'node:url';
 import { parseArgs } from 'node:util';
 import { loadCorpus } from './src/corpus.ts';
 import { pick, start, toggleMark, type Session } from './src/reading.ts';
@@ -23,13 +25,28 @@ function seeded(seed: number): () => number {
   };
 }
 
-const { values, positionals: moves } = parseArgs({ allowPositionals: true, options: { seed: { type: 'string' } } });
+const USAGE = 'Usage: node read.ts [--seed N] [--data DIR] [moves...]   moves: an option number, s (save), d (dislike), q (quit)';
+let parsed;
+try {
+  parsed = parseArgs({
+    allowPositionals: true,
+    options: { seed: { type: 'string' }, data: { type: 'string' }, help: { type: 'boolean', short: 'h' } },
+  });
+} catch (error) {
+  console.error(`${(error as Error).message}\n${USAGE}`);
+  process.exit(1);
+}
+const { values, positionals: moves } = parsed;
+if (values.help) {
+  console.log(USAGE);
+  process.exit();
+}
 if (values.seed !== undefined && !Number.isInteger(Number(values.seed))) {
   console.error('--seed takes an integer');
   process.exit(1);
 }
 const random = values.seed === undefined ? Math.random : seeded(Number(values.seed));
-const corpus = loadCorpus();
+const corpus = loadCorpus(values.data ? pathToFileURL(`${values.data}/`) : undefined);
 
 function show(session: Session): void {
   const current = session.trail.at(-1)!;
@@ -56,6 +73,7 @@ function move(session: Session, input: string): Session | null {
 let session: Session | null = start(corpus, random);
 show(session);
 const terminal = moves.length ? null : createInterface({ input: process.stdin, output: process.stdout, prompt: '> ' });
+if (terminal) console.log('Type an option number to read it, s to save, d to dislike, q to quit.');
 terminal?.prompt();
 // Scripted moves, or typed ones until q or the end of input (Ctrl+D).
 for await (const input of terminal ?? moves) {

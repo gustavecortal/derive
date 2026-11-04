@@ -15,6 +15,21 @@ date-released: "2026-11-04"
 keywords:
   - recommender system
   - Rocchio relevance feedback
-  - text embeddings
-  - Qwen3-Embedding
   - serendipity
+  - text embeddings
+  - semantic search
+  - Qwen3-Embedding
+references:
+  - type: book-section
+    title: "Relevance feedback in information retrieval"
+    authors:
+      - family-names: Rocchio
+        given-names: J. J.
+    collection-title: "The SMART Retrieval System: Experiments in Automatic Document Processing"
+    year: 1971
+  - type: article
+    title: "Qwen3 Embedding: Advancing Text Embedding and Reranking Through Foundation Models"
+    authors:
+      - name: "Qwen Team"
+    year: 2025
+    url: "https://arxiv.org/abs/2506.05176"
