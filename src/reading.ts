@@ -214,6 +214,22 @@ export function pick(state: ReadingState, id: string): ReadingState {
 }
 
 /**
+ * Show a card of the trail again, with the options it had.
+ *
+ * Args:
+ *   state: the reading state.
+ *   position: index into the trail.
+ *
+ * Returns:
+ *   The new state.
+ */
+export function reopen(state: ReadingState, position: number): ReadingState {
+  if (!(position >= 0 && position < state.trail.length))
+    throw new RangeError(`no card ${position} in the trail`);
+  return { ...state, position };
+}
+
+/**
  * Set or clear a mark on the card on screen. Saving clears a dislike, and
  * the other way round.
  *

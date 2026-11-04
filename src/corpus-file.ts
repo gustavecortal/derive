@@ -4,7 +4,7 @@
  * `concepts.json` holds the text and metadata. `vectors.bin` holds one float32
  * scale per concept followed by every vector as int8, row `i` belonging to
  * concept `i`. int8 keeps 99.6% of the float32 neighbours at a quarter of the
- * size. research/concept-space/embed.py writes both.
+ * size. embed.py writes vectors.bin from concepts.json.
  */
 
 import { normalize, type Corpus } from './corpus.ts';

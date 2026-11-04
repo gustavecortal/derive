@@ -7,7 +7,8 @@
  */
 
 import { readFileSync } from 'node:fs';
-import { createInterface } from 'node:readline/promises';
+import { createInterface } from 'node:readline';
+import { parseArgs } from 'node:util';
 import { readCorpus, type CorpusFile } from './src/corpus-file.ts';
 import {
   conceptOf,
@@ -34,10 +35,13 @@ function seeded(seed: number): () => number {
   };
 }
 
-const args = process.argv.slice(2);
-const seedAt = args.indexOf('--seed');
-const random = seedAt === -1 ? Math.random : seeded(Number(args.splice(seedAt, 2)[1]));
-const scripted = args.length > 0 ? args : null;
+const { values, positionals: moves } = parseArgs({ allowPositionals: true, options: { seed: { type: 'string' } } });
+const seed = values.seed === undefined ? null : Number(values.seed);
+if (seed !== null && !Number.isInteger(seed)) {
+  console.error('--seed takes an integer');
+  process.exit(1);
+}
+const random = seed === null ? Math.random : seeded(seed);
 
 const file: CorpusFile = JSON.parse(readFileSync(new URL('data/concepts.json', import.meta.url), 'utf8'));
 const corpus = readCorpus(file, readFileSync(new URL('data/vectors.bin', import.meta.url)));
@@ -68,15 +72,21 @@ function move(state: ReadingState, input: string): ReadingState | null {
 
 let state: ReadingState | null = startReading(library, corpus, random);
 show(state);
-const terminal = scripted ? null : createInterface({ input: process.stdin, output: process.stdout });
-for (const input of scripted ?? []) {
-  state = move(state, input);
-  if (!state) break;
+for (const input of moves) {
   console.log(`> ${input}`);
+  state = move(state, input.trim().toLowerCase());
+  if (!state) process.exit();
   show(state);
 }
-while (terminal && state) {
-  state = move(state, (await terminal.question('> ')).trim().toLowerCase());
-  if (state) show(state);
+if (moves.length === 0) {
+  const terminal = createInterface({ input: process.stdin, output: process.stdout, prompt: '> ' });
+  terminal.prompt();
+  // Ends on q, or at the end of input (Ctrl+D).
+  for await (const line of terminal) {
+    state = move(state!, line.trim().toLowerCase());
+    if (!state) break;
+    show(state);
+    terminal.prompt();
+  }
+  terminal.close();
 }
-terminal?.close();
