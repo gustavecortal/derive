@@ -9,7 +9,7 @@
 
 Each concept is embedded from its term and one-sentence description. The vectors are cut to the
 corpus's dimensions, centred on the corpus mean, which keeps a few concepts from being near most
-others, and quantized to int8 (src/corpus-file.ts reads them back). The mean is not kept, so after
+others, and quantized to int8 (src/corpus.ts reads them back). The mean is not kept, so after
 any change to the concepts, embed the whole corpus again.
 """
 
