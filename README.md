@@ -48,10 +48,9 @@ Your taste is a Rocchio vector: the mean embedding of the concepts you picked or
 | File | Contents |
 |---|---|
 | [`src/ways.ts`](src/ways.ts) | The three options under a card |
-| [`src/reader.ts`](src/reader.ts) | The Rocchio taste vector |
+| [`src/taste.ts`](src/taste.ts) | The Rocchio taste vector |
 | [`src/reading.ts`](src/reading.ts) | A reading session: history, marks and passed-over options |
-| [`src/corpus.ts`](src/corpus.ts) | Similarity, normalization and synonym groups |
-| [`src/corpus-file.ts`](src/corpus-file.ts) | Reads the two data files |
+| [`src/corpus.ts`](src/corpus.ts) | Loads the concepts and their vectors |
 | [`embed.py`](embed.py) | Writes `data/vectors.bin` |
 | [`read.ts`](read.ts) | The terminal reader |
 

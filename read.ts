@@ -6,24 +6,12 @@
  *   node read.ts --seed 7 ...    seed the draw of the Far option, for repeatable sessions
  */
 
-import { readFileSync } from 'node:fs';
 import { createInterface } from 'node:readline';
 import { parseArgs } from 'node:util';
-import { readCorpus, type CorpusFile } from './src/corpus-file.ts';
-import {
-  conceptOf,
-  currentCard,
-  fieldOf,
-  libraryOf,
-  optionsOf,
-  pick,
-  startReading,
-  toggleMark,
-  withOptions,
-  type ReadingState,
-} from './src/reading.ts';
+import { loadCorpus } from './src/corpus.ts';
+import { pick, start, toggleMark, type Session } from './src/reading.ts';
 
-const LABELS = { close: 'Closest', aside: 'Other field', far: 'Far' } as const;
+const LABELS = { close: 'Closest', aside: 'Other field', far: 'Far' };
 
 /** Uniform numbers in [0, 1) from a 32-bit seed (mulberry32). */
 function seeded(seed: number): () => number {
@@ -36,57 +24,45 @@ function seeded(seed: number): () => number {
 }
 
 const { values, positionals: moves } = parseArgs({ allowPositionals: true, options: { seed: { type: 'string' } } });
-const seed = values.seed === undefined ? null : Number(values.seed);
-if (seed !== null && !Number.isInteger(seed)) {
+if (values.seed !== undefined && !Number.isInteger(Number(values.seed))) {
   console.error('--seed takes an integer');
   process.exit(1);
 }
-const random = seed === null ? Math.random : seeded(seed);
+const random = values.seed === undefined ? Math.random : seeded(Number(values.seed));
+const corpus = loadCorpus();
 
-const file: CorpusFile = JSON.parse(readFileSync(new URL('data/concepts.json', import.meta.url), 'utf8'));
-const corpus = readCorpus(file, readFileSync(new URL('data/vectors.bin', import.meta.url)));
-const library = libraryOf(file);
-
-function show(state: ReadingState): void {
-  const id = currentCard(state);
-  const { term, hook } = conceptOf(library, id);
-  const mark = state.marks[id] ? `  [${state.marks[id]}]` : '';
-  console.log(`\n${term}  (${fieldOf(library, id)})${mark}\n${hook}\n`);
-  (optionsOf(state, library) ?? []).forEach(({ id: option, way }, index) =>
-    console.log(`  ${index + 1}  ${LABELS[way].padEnd(11)}  ${conceptOf(library, option).term}`),
+function show(session: Session): void {
+  const current = session.trail.at(-1)!;
+  const { term, hook, cluster } = corpus.concepts[current]!;
+  const mark = session.marks[current] ? `  [${session.marks[current]}]` : '';
+  console.log(`\n${term}  (${corpus.fields[cluster]})${mark}\n${hook}\n`);
+  session.options.forEach(({ way, concept }, index) =>
+    console.log(`  ${index + 1}  ${LABELS[way].padEnd(11)}  ${corpus.concepts[concept]!.term}`),
   );
 }
 
-/** Apply one move: an option's number, s, or d. Returns null on q. */
-function move(state: ReadingState, input: string): ReadingState | null {
+/** One move: an option's number, s, d, or q (null). */
+function move(session: Session, input: string): Session | null {
+  input = input.trim().toLowerCase();
   if (input === 'q') return null;
-  if (input === 's') return toggleMark(state, 'saved');
-  if (input === 'd') return toggleMark(state, 'disliked');
-  const option = (optionsOf(state, library) ?? [])[Number(input) - 1];
-  if (!option) {
-    console.log('Type an option number, s, d or q.');
-    return state;
-  }
-  return withOptions(pick(state, option.id), library, corpus, random);
+  if (input === 's') return toggleMark(session, 'saved');
+  if (input === 'd') return toggleMark(session, 'disliked');
+  const option = session.options[Number(input) - 1];
+  if (option) return pick(corpus, session, option.concept, random);
+  console.log('Type an option number, s, d or q.');
+  return session;
 }
 
-let state: ReadingState | null = startReading(library, corpus, random);
-show(state);
-for (const input of moves) {
-  console.log(`> ${input}`);
-  state = move(state, input.trim().toLowerCase());
-  if (!state) process.exit();
-  show(state);
+let session: Session | null = start(corpus, random);
+show(session);
+const terminal = moves.length ? null : createInterface({ input: process.stdin, output: process.stdout, prompt: '> ' });
+terminal?.prompt();
+// Scripted moves, or typed ones until q or the end of input (Ctrl+D).
+for await (const input of terminal ?? moves) {
+  if (!terminal) console.log(`> ${input}`);
+  session = move(session, input);
+  if (!session) break;
+  show(session);
+  terminal?.prompt();
 }
-if (moves.length === 0) {
-  const terminal = createInterface({ input: process.stdin, output: process.stdout, prompt: '> ' });
-  terminal.prompt();
-  // Ends on q, or at the end of input (Ctrl+D).
-  for await (const line of terminal) {
-    state = move(state!, line.trim().toLowerCase());
-    if (!state) break;
-    show(state);
-    terminal.prompt();
-  }
-  terminal.close();
-}
+terminal?.close();

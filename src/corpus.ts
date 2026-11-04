@@ -1,39 +1,74 @@
 /**
- * The corpus as the recommender sees it: concepts are row indices, and every
- * per-concept fact the ranking needs is a typed array in data order.
+ * The corpus. data/concepts.json holds each concept's term, one-sentence description, field and synonym group.
+ * data/vectors.bin, written by embed.py, holds one float32 scale per concept followed by every embedding as int8,
+ * row `i` belonging to concept `i`. int8 keeps 99.6% of the float32 neighbours at a quarter of the size.
  */
 
-/** Unit-length concept vectors with the fields and synonym groups ranking needs. */
+import { readFileSync } from 'node:fs';
+
+export interface Concept {
+  id: string;
+  term: string;
+  hook: string;
+  /** Index of its field. */
+  cluster: number;
+  /** Index of the first concept of its synonym group (itself when alone). */
+  group: number;
+}
+
 export interface Corpus {
+  concepts: Concept[];
+  /** Field names, by index. */
+  fields: string[];
   count: number;
   dimensions: number;
   /** `count × dimensions`, each row L2-normalized. */
   vectors: Float32Array;
-  /** Field (cluster) index of each concept. */
+  /** Field of each concept. */
   clusters: Uint16Array;
   /**
-   * Synonym group of each concept: the index of the group's first member.
-   * Concepts that share a group are one idea under different names, so
-   * showing one of them uses up the others.
+   * Synonym group of each concept. Concepts that share a group are one idea under different names, so showing one
+   * of them uses up the others.
    */
   groups: Uint32Array;
 }
 
+/** Read both files of `dir` and dequantize the vectors, renormalized once so ranking works on float32. */
+export function loadCorpus(dir = new URL('../data/', import.meta.url)): Corpus {
+  const file = JSON.parse(readFileSync(new URL('concepts.json', dir), 'utf8'));
+  const bytes = readFileSync(new URL('vectors.bin', dir));
+  const { concepts, dimensions } = file as { concepts: Concept[]; dimensions: number };
+  const count = concepts.length;
+  if (bytes.byteLength !== count * (4 + dimensions)) {
+    throw new Error(`vectors.bin has ${bytes.byteLength} bytes, expected ${count * (4 + dimensions)} for ${count} concepts`);
+  }
+  const scales = new Float32Array(bytes.buffer, bytes.byteOffset, count);
+  const values = new Int8Array(bytes.buffer, bytes.byteOffset + count * 4, count * dimensions);
+  const vectors = new Float32Array(count * dimensions);
+  for (let row = 0; row < count; row++) {
+    for (let index = 0; index < dimensions; index++) {
+      vectors[row * dimensions + index] = values[row * dimensions + index]! * scales[row]!;
+    }
+    normalize(vectors.subarray(row * dimensions, (row + 1) * dimensions));
+  }
+  return {
+    concepts,
+    fields: file.clusterLabels,
+    count,
+    dimensions,
+    vectors,
+    clusters: Uint16Array.from(concepts, (concept) => concept.cluster),
+    groups: Uint32Array.from(concepts, (concept) => concept.group),
+  };
+}
+
 /**
- * Dot product of two rows of the corpus, or of a row and a free vector.
- *
- * Args:
- *   corpus: the corpus holding the row.
- *   row: concept index.
- *   vector: a vector of `corpus.dimensions` values.
- *
- * Returns:
- *   The cosine similarity, since every row is unit length.
+ * Cosine similarity of a concept and a unit vector. The four running sums add in the same order as the web page,
+ * so rankings match it exactly.
  */
 export function similarity(corpus: Corpus, row: number, vector: Float32Array): number {
   const { vectors, dimensions } = corpus;
   const offset = row * dimensions;
-  // Four independent sums let the engine overlap the additions.
   let first = 0;
   let second = 0;
   let third = 0;
@@ -50,15 +85,7 @@ export function similarity(corpus: Corpus, row: number, vector: Float32Array): n
   return first + second + third + fourth;
 }
 
-/**
- * Scale a vector to unit length in place. A zero vector is left as it is.
- *
- * Args:
- *   vector: the vector to normalize.
- *
- * Returns:
- *   The same vector, for chaining.
- */
+/** Scale a vector to unit length in place. A zero vector is left as it is. */
 export function normalize(vector: Float32Array): Float32Array {
   let sumOfSquares = 0;
   for (const value of vector) sumOfSquares += value * value;
@@ -68,33 +95,7 @@ export function normalize(vector: Float32Array): Float32Array {
   return vector;
 }
 
-/**
- * The vector of one concept, as a view over the corpus buffer.
- *
- * Args:
- *   corpus: the corpus.
- *   row: concept index.
- *
- * Returns:
- *   A `Float32Array` view. Writing to it changes the corpus.
- */
+/** A concept's vector, as a view over the corpus. */
 export function vectorOf(corpus: Corpus, row: number): Float32Array {
   return corpus.vectors.subarray(row * corpus.dimensions, (row + 1) * corpus.dimensions);
-}
-
-/**
- * Mark the synonym groups of the given concepts as used.
- *
- * Args:
- *   corpus: the corpus.
- *   rows: concept indices already shown to the reader.
- *
- * Returns:
- *   A mask indexed by concept: `mask[groups[i]] === 1` means concept `i`, or a
- *   synonym of it, has been shown.
- */
-export function usedGroups(corpus: Corpus, rows: Iterable<number>): Uint8Array {
-  const mask = new Uint8Array(corpus.count);
-  for (const row of rows) mask[corpus.groups[row]!] = 1;
-  return mask;
 }
