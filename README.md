@@ -1,6 +1,6 @@
 # dérive
 
-[dérive](https://gustavecortal.com/concept-space/) is a recommender over concept embeddings that suggests rare concepts close to or far from your taste, learned by Rocchio relevance feedback. This repository runs the same recommender in a terminal.
+[dérive](https://gustavecortal.com/concept-space/) is a recommender over concept embeddings that suggests rare concepts close to or far from your taste, learned by Rocchio relevance feedback. This repository runs the recommender of the [live demo](https://gustavecortal.com/concept-space/) in a terminal.
 
 <p align="center">
   <a href="https://gustavecortal.com/concept-space/"><img src="docs/demo.webp" width="750" alt="Reading dérive: a concept card with three options under it, Closest, Other field and Far, each pick opening a new card"></a>
