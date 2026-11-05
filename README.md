@@ -8,8 +8,6 @@
 
 ## Quick start
 
-With [Node.js](https://nodejs.org/) 24 or later, and no npm packages:
-
 ```bash
 git clone https://github.com/gustavecortal/derive.git
 cd derive
@@ -23,8 +21,6 @@ Type an option's number to read it, `s` to save the card, `d` to dislike it, and
 Each of the 2,028 concepts is embedded from its term and description with [Qwen3-Embedding-4B](https://huggingface.co/Qwen/Qwen3-Embedding-4B). Under each card, **Closest** is the unread concept most similar to it. **Other field** is the one most similar to your taste, outside the fields of the card and of Closest. **Far** is drawn among the concepts least like the last ten you read. Your taste is the mean embedding of the concepts you picked or saved, minus half that of those you disliked.
 
 ## Rebuild the embeddings
-
-With [uv](https://docs.astral.sh/uv/getting-started/installation/):
 
 ```bash
 uv run embed.py
